@@ -27,25 +27,30 @@ class QuizStartPage extends Component
     {
         $this->selectedGrade = $grade;
         $this->step = 2;
-        
+
         // Load available quizzes for this grade from cache
         $cacheService = app(QuizCacheService::class);
         $allQuizzes = collect();
-        
+
         foreach ($this->subjects as $subject) {
             $quizzes = $cacheService->getQuizzesByGradeAndSubject($grade, $subject->id);
+            $allAgesQuizzes = $cacheService->getQuizzesByGradeAndSubject(0, $subject->id);
+
             if ($quizzes->count() > 0) {
                 $allQuizzes = $allQuizzes->merge($quizzes);
             }
+            if ($allAgesQuizzes->count() > 0) {
+                $allQuizzes = $allQuizzes->merge($allAgesQuizzes);
+            }
         }
-        
+
         $this->availableQuizzes = $allQuizzes->groupBy('subject_id');
     }
 
     public function selectSubject($subjectId)
     {
         $this->selectedSubject = $subjectId;
-        
+
         if (auth()->check()) {
             $this->startQuiz();
         } else {
@@ -60,7 +65,11 @@ class QuizStartPage extends Component
             return;
         }
 
-        $quiz = Quiz::with('questions')->where('grade', $this->selectedGrade)
+        $quiz = Quiz::with('questions')
+            ->where(function($query) {
+                $query->where('grade', $this->selectedGrade)
+                      ->orWhere('grade', 0);
+            })
             ->where('subject_id', $this->selectedSubject)
             ->where('is_published', true)
             ->first();

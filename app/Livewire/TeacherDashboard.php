@@ -10,11 +10,16 @@ use App\Models\Attempt;
 use Livewire\Component;
 use Livewire\WithPagination;
 
+
 class TeacherDashboard extends Component
 {
     use WithPagination;
 
     public $activeTab = 'overview';
+
+    // Filters
+    public $selectedGrade = '';
+    public $selectedSubject = '';
 
     // Quiz creation
     public $showCreateQuiz = false;
@@ -41,6 +46,16 @@ class TeacherDashboard extends Component
     public function setTab($tab)
     {
         $this->activeTab = $tab;
+        $this->resetPage();
+    }
+
+    public function updatingSelectedGrade()
+    {
+        $this->resetPage();
+    }
+
+    public function updatingSelectedSubject()
+    {
         $this->resetPage();
     }
 
@@ -173,10 +188,17 @@ class TeacherDashboard extends Component
                 break;
 
             case 'quizzes':
-                $data['quizzes'] = Quiz::with('subject')
-                    ->orderBy('grade')
-                    ->orderBy('subject_id')
-                    ->paginate(10);
+                $query = Quiz::with('subject');
+
+                if ($this->selectedGrade) {
+                    $query->where('grade', $this->selectedGrade);
+                }
+
+                if ($this->selectedSubject) {
+                    $query->where('subject_id', $this->selectedSubject);
+                }
+
+                $data['quizzes'] = $query->orderBy('grade')->orderBy('subject_id')->paginate(10);
                 $data['subjects'] = Subject::all();
                 break;
 

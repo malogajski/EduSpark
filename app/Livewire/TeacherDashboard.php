@@ -15,7 +15,7 @@ class TeacherDashboard extends Component
     use WithPagination;
 
     public $activeTab = 'overview';
-    
+
     // Quiz creation
     public $showCreateQuiz = false;
     public $newQuiz = [
@@ -24,7 +24,7 @@ class TeacherDashboard extends Component
         'title' => ['sr' => '', 'en' => '', 'hu' => ''],
         'description' => ['sr' => '', 'en' => '', 'hu' => ''],
     ];
-    
+
     public $editingQuiz = null;
 
     public function mount()
@@ -33,6 +33,9 @@ class TeacherDashboard extends Component
         if (!auth()->check() || auth()->user()->role !== 'teacher') {
             abort(403, 'Access denied. Teachers only.');
         }
+
+        // Set active tab from query parameter
+        $this->activeTab = request()->query('tab', 'overview');
     }
 
     public function setTab($tab)
@@ -156,7 +159,7 @@ class TeacherDashboard extends Component
     public function render()
     {
         $data = [];
-        
+
         switch ($this->activeTab) {
             case 'overview':
                 $data['totalQuizzes'] = Quiz::count();
@@ -168,7 +171,7 @@ class TeacherDashboard extends Component
                     ->limit(5)
                     ->get();
                 break;
-                
+
             case 'quizzes':
                 $data['quizzes'] = Quiz::with('subject')
                     ->orderBy('grade')
@@ -176,7 +179,7 @@ class TeacherDashboard extends Component
                     ->paginate(10);
                 $data['subjects'] = Subject::all();
                 break;
-                
+
             case 'attempts':
                 $data['attempts'] = Attempt::with(['quiz.subject', 'user'])
                     ->orderBy('created_at', 'desc')

@@ -10,12 +10,14 @@ use Livewire\Component;
 
 class QuizStartPage extends Component
 {
-    public $step = 1; // 1: grade selection, 2: subject selection, 3: guest name if not authenticated
+    public $step = 1; // 1: grade selection, 2: subject selection, 3: quiz selection, 4: guest name if not authenticated
     public $selectedGrade = null;
     public $selectedSubject = null;
+    public $selectedQuiz = null;
     public $guestName = '';
     public $subjects = [];
     public $availableQuizzes = [];
+    public $quizChoices = [];
 
     public function mount()
     {
@@ -51,10 +53,50 @@ class QuizStartPage extends Component
     {
         $this->selectedSubject = $subjectId;
 
+        // Check if there are multiple quizzes for this subject/grade combination
+        if ($this->selectedGrade === 0) {
+            // For "All Ages" (grade 0), only show grade 0 quizzes
+            $quizzes = Quiz::where('grade', 0)
+                ->where('subject_id', $this->selectedSubject)
+                ->where('is_published', true)
+                ->get();
+        } else {
+            // For specific grades, show both grade-specific and "All Ages" quizzes
+            $quizzes = Quiz::where(function($query) {
+                    $query->where('grade', $this->selectedGrade)
+                          ->orWhere('grade', 0);
+                })
+                ->where('subject_id', $this->selectedSubject)
+                ->where('is_published', true)
+                ->get();
+        }
+
+        if ($quizzes->count() > 1) {
+            // Multiple quizzes available, let user choose
+            $this->quizChoices = $quizzes;
+            $this->step = 3; // Quiz selection
+        } else {
+            // Only one quiz, proceed directly
+            if ($quizzes->count() === 1) {
+                $this->selectedQuiz = $quizzes->first()->id;
+            }
+
+            if (auth()->check()) {
+                $this->startQuiz();
+            } else {
+                $this->step = 4; // Ask for guest name
+            }
+        }
+    }
+
+    public function selectQuiz($quizId)
+    {
+        $this->selectedQuiz = $quizId;
+
         if (auth()->check()) {
             $this->startQuiz();
         } else {
-            $this->step = 3; // Ask for guest name
+            $this->step = 4; // Ask for guest name
         }
     }
 
@@ -65,14 +107,12 @@ class QuizStartPage extends Component
             return;
         }
 
-        $quiz = Quiz::with('questions')
-            ->where(function($query) {
-                $query->where('grade', $this->selectedGrade)
-                      ->orWhere('grade', 0);
-            })
-            ->where('subject_id', $this->selectedSubject)
-            ->where('is_published', true)
-            ->first();
+        if (!$this->selectedQuiz) {
+            session()->flash('error', 'No quiz selected.');
+            return;
+        }
+
+        $quiz = Quiz::with('questions')->find($this->selectedQuiz);
 
         if (!$quiz) {
             session()->flash('error', 'Quiz not found.');
@@ -96,6 +136,22 @@ class QuizStartPage extends Component
     {
         if ($this->step > 1) {
             $this->step--;
+
+            // Reset selections when going back
+            if ($this->step === 1) {
+                $this->selectedGrade = null;
+                $this->selectedSubject = null;
+                $this->selectedQuiz = null;
+                $this->availableQuizzes = [];
+            } elseif ($this->step === 2) {
+                $this->selectedSubject = null;
+                $this->selectedQuiz = null;
+                $this->availableQuizzes = [];
+                $this->quizChoices = [];
+            } elseif ($this->step === 3) {
+                $this->selectedQuiz = null;
+                $this->guestName = '';
+            }
         }
     }
 

@@ -81,6 +81,13 @@
 
         <!-- Step 2: Subject Selection -->
         @if($step === 2)
+            <div class="bg-blue-100 p-4 mb-4 rounded">
+                <p>Debug Step 2: Selected Grade = {{ $selectedGrade }}</p>
+                <p>Available Quizzes by Subject: {{ json_encode($availableQuizzes->keys()) }}</p>
+            </div>
+        @endif
+
+        @if($step === 2)
             <div class="flex items-center justify-between mb-6">
                 <h2 class="text-xl font-semibold">
                     @switch(app()->getLocale())
@@ -152,8 +159,67 @@
             @endif
         @endif
 
-        <!-- Step 3: Guest Name Input -->
-        @if($step === 3)
+
+
+        <!-- Step 3: Quiz Selection (when multiple quizzes available) -->
+        @if($step === 3 && $quizChoices && count($quizChoices) > 0)
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-xl font-semibold">
+                    @switch(app()->getLocale())
+                        @case('en')
+                            Choose Quiz
+                            @break
+                        @case('hu')
+                            Kvíz választása
+                            @break
+                        @default
+                            Изабери квиз
+                    @endswitch
+                </h2>
+                <button wire:click="back" class="text-blue-600 hover:text-blue-800">
+                    @switch(app()->getLocale())
+                        @case('en')
+                            ← Back
+                            @break
+                        @case('hu')
+                            ← Vissza
+                            @break
+                        @default
+                            ← Назад
+                    @endswitch
+                </button>
+            </div>
+
+            <div class="space-y-3">
+                @foreach($quizChoices as $quiz)
+                    <button wire:click="selectQuiz({{ $quiz->id }})"
+                            class="w-full p-4 border-2 border-gray-200 rounded-lg hover:border-blue-500 hover:bg-blue-50 transition duration-200 text-left">
+                        <div class="font-semibold text-gray-900">
+                            {{ $quiz->getTitle() }}
+                        </div>
+                        <div class="text-sm text-gray-500 mt-1">
+                            {{ $quiz->getDescription() }}
+                        </div>
+                        <div class="text-xs text-gray-400 mt-2">
+                            {{ $quiz->questions()->count() }}
+                            @switch(app()->getLocale())
+                                @case('en')
+                                    questions (20 random will be selected)
+                                    @break
+                                @case('hu')
+                                    kérdés (20 véletlenszerű lesz kiválasztva)
+                                    @break
+                                @default
+                                    питања (20 насумичних ће бити изабрано)
+                            @endswitch
+                        </div>
+                    </button>
+                @endforeach
+            </div>
+        @endif
+
+        <!-- Step 4: Guest Name Input -->
+        @if($step === 4 || ($step === 3 && (empty($quizChoices) || count($quizChoices) <= 1)))
             <div class="flex items-center justify-between mb-6">
                 <h2 class="text-xl font-semibold">
                     @switch(app()->getLocale())
